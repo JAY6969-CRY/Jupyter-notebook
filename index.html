@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home Page - Select or create a notebook</title>
+<style>
+:root{
+  --jp-grey:#f5f5f5; --jp-border:#d3d3d3; --jp-blue:#428bca; --jp-navbar:#f8f8f8;
+  --code-kw:#008000; --code-str:#ba2121; --code-com:#408080; --code-fn:#0000ff; --code-num:#666;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;background:#fff;color:#000;font-size:14px;}
+pre,code{font-family:"Menlo","Consolas",monospace;}
+
+/* ---------- Top nav bar (Jupyter logo strip) ---------- */
+.jp-nav{background:var(--jp-navbar);border-bottom:1px solid var(--jp-border);padding:6px 14px;display:flex;align-items:center;gap:8px;top:env(safe-area-inset-top,0px);position:sticky;z-index:5;}
+.jp-logo{font-weight:700;font-size:17px;color:#333;display:flex;align-items:center;gap:6px;cursor:pointer;}
+.jp-logo .snake{font-size:20px;}
+.jp-nav .fname{font-size:16px;color:#333;padding:4px 6px;border-bottom:1px dashed transparent;}
+.jp-nav .fname:hover{border-bottom:1px dashed #999;cursor:text;}
+.saved-tag{font-size:12px;color:#999;margin-left:6px;}
+
+/* ---------- Dashboard (tree/file browser) ---------- */
+.dash{max-width:1000px;margin:20px auto;padding:0 12px 60px;}
+.dash-tabs{border-bottom:1px solid var(--jp-border);display:flex;gap:2px;margin-bottom:0;font-size:13px;}
+.dash-tabs div{padding:8px 14px;cursor:default;color:#333;}
+.dash-tabs div.active{border:1px solid var(--jp-border);border-bottom:1px solid #fff;border-radius:4px 4px 0 0;margin-bottom:-1px;font-weight:600;}
+.dash-toolbar{border:1px solid var(--jp-border);border-top:none;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;background:#fafafa;}
+.dash-toolbar .left{display:flex;align-items:center;gap:10px;font-size:13px;}
+.dash-toolbar button{font-size:12px;padding:4px 10px;border:1px solid #ccc;background:#fff;border-radius:3px;cursor:pointer;}
+.dash-toolbar button.new{background:#3d8b3d;color:#fff;border-color:#3d8b3d;}
+.crumb{color:#888;}
+.filelist{border:1px solid var(--jp-border);border-top:none;}
+.filerow{display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid #eee;font-size:13px;cursor:pointer;}
+.filerow:hover{background:#f5f9ff;}
+.filerow .ic{width:26px;color:#5b7ea8;font-size:15px;}
+.filerow .nm{flex:1;color:#08c;}
+.filerow .nm:hover{text-decoration:underline;}
+.filerow .mod{color:#999;width:160px;font-size:12px;}
+.filerow .sz{color:#999;width:70px;font-size:12px;text-align:right;}
+
+/* ---------- Notebook view ---------- */
+.notebook-wrap{display:none;}
+.jp-menubar{border-bottom:1px solid var(--jp-border);padding:4px 14px;display:flex;gap:16px;font-size:13px;color:#333;background:#fff;}
+.jp-menubar span{cursor:default;}
+.jp-menubar span:hover{color:#000;text-decoration:underline;}
+.jp-toolbar{border-bottom:1px solid var(--jp-border);padding:6px 14px;display:flex;align-items:center;gap:6px;background:#fafafa;flex-wrap:wrap;}
+.jp-toolbar button{border:1px solid #ccc;background:#fff;border-radius:3px;padding:4px 9px;font-size:13px;cursor:pointer;color:#444;}
+.jp-toolbar select{border:1px solid #ccc;border-radius:3px;padding:3px 6px;font-size:12px;background:#fff;}
+.jp-toolbar .sep{width:1px;height:20px;background:#ddd;margin:0 4px;}
+.container{max-width:900px;margin:0 auto;padding:18px 20px 100px;}
+
+.cell{display:flex;margin-bottom:2px;}
+.cell .prompt{width:82px;flex-shrink:0;text-align:right;padding:9px 8px 0 0;color:#303f9f;font-size:12px;font-family:monospace;user-select:none;}
+.cell .prompt.out{color:#d84315;}
+.cell .body{flex:1;min-width:0;}
+.input-area{background:#f7f7f7;border:1px solid #cfcfcf;border-radius:2px;padding:8px 10px;overflow-x:auto;}
+.input-area pre{margin:0;line-height:1.5;white-space:pre;}
+.kw{color:var(--code-kw);font-weight:600;}
+.str{color:var(--code-str);}
+.com{color:var(--code-com);font-style:italic;}
+.fn{color:var(--code-fn);}
+.num{color:var(--code-num);}
+
+.output-area{padding:6px 4px 14px 10px;overflow-x:auto;}
+.output-area pre{margin:0;white-space:pre-wrap;word-break:break-word;color:#000;line-height:1.45;}
+.md-cell{padding:6px 4px 10px 92px;}
+.md-cell h3{margin:14px 0 4px;font-size:17px;border-bottom:1px solid #eee;padding-bottom:4px;}
+.md-cell p{margin:2px 0;color:#333;font-size:13.5px;}
+
+.back-hint{font-size:12px;color:#888;padding:4px 14px;background:#fffbe6;border-bottom:1px solid #f0e6b0;}
+.back-hint b{color:#555;cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div class="jp-nav">
+  <div class="jp-logo" onclick="showDash()"><span class="snake">🐍</span>jupyter</div>
+  <div class="fname" id="navFname">Home</div>
+</div>
+
+<!-- ============ DASHBOARD ============ -->
+<div class="dash" id="dashView">
+  <div class="dash-tabs">
+    <div class="active">Files</div>
+    <div>Running</div>
+    <div>Clusters</div>
+  </div>
+  <div class="dash-toolbar">
+    <div class="left"><span class="crumb">jupyter</span></div>
+    <div style="display:flex;gap:8px;">
+      <button class="new">New ▾</button>
+      <button>Upload</button>
+    </div>
+  </div>
+  <div class="filelist" id="fileList"></div>
+</div>
+
+<!-- ============ NOTEBOOK VIEW ============ -->
+<div class="notebook-wrap" id="nbView">
+  <div class="back-hint">This notebook is running (Python 3). — <b onclick="showDash()">back to Home</b></div>
+  <div class="jp-menubar">
+    <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Cell</span><span>Kernel</span><span>Widgets</span><span>Help</span>
+  </div>
+  <div class="jp-toolbar">
+    <button title="Save">💾</button>
+    <button title="Insert cell">➕</button>
+    <div class="sep"></div>
+    <button title="Cut">✂️</button>
+    <button title="Copy">📋</button>
+    <button title="Paste">📄</button>
+    <div class="sep"></div>
+    <button title="Run">▶ Run</button>
+    <button title="Interrupt">■</button>
+    <button title="Restart">⟲</button>
+    <div class="sep"></div>
+    <select><option>Code</option><option>Markdown</option></select>
+  </div>
+  <div class="container" id="cellsContainer"></div>
+</div>
+
+<script>
+const nowStr = "Seconds ago";
+
+const files = [
+  {name:"Untitled1.ipynb", label:"Program 1 — Tokenization / Stopwords / Stemming"},
+  {name:"Untitled2.ipynb", label:"Program 2 — POS Tagging / Lemmatization"},
+  {name:"Untitled3.ipynb", label:"Program 3 — Chunking / NER"},
+  {name:"Untitled4.ipynb", label:"Program 4 — TF-IDF / CYK Parsing"}
+];
+
+// ---- notebook cell data: [ {type:'md', html:'...'} | {type:'code', code:'...', out:'...'} ]
+const notebooks = {
+
+"Untitled1.ipynb": [
+{type:"md", html:"<h3>A) Tokenization</h3>"},
+{type:"code", n:1,
+ code:`import nltk
+nltk.download('punkt')
+nltk.download('punkt_tab')
+from nltk.tokenize import sent_tokenize, word_tokenize
+
+text = "NLTK is a great library. It helps in NLP tasks."
+sentences = sent_tokenize(text)
+words = word_tokenize(text)
+
+for i, s in enumerate(sentences):
+    print(i, s)
+for i, w in enumerate(words):
+    print(i, w)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package punkt_tab to /root/nltk_data...
+[nltk_data]   Package punkt_tab is already up-to-date!
+0 NLTK is a great library.
+1 It helps in NLP tasks.
+0 NLTK
+1 is
+2 a
+3 great
+4 library
+5 .
+6 It
+7 helps
+8 in
+9 NLP
+10 tasks
+11 .`},
+{type:"md", html:"<h3>B) Stopword Removal</h3>"},
+{type:"code", n:2,
+ code:`import nltk
+nltk.download('punkt')
+nltk.download('stopwords')
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+
+stop_words = set(stopwords.words('english'))
+text = "This is a simple example to remove stopwords from text."
+tokens = word_tokenize(text)
+filtered = [w for w in tokens if w.lower() not in stop_words]
+
+print(filtered)
+print(len(tokens), len(filtered))`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package stopwords to /root/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+['simple', 'example', 'remove', 'stopwords', 'text', '.']
+11 6`},
+{type:"md", html:"<h3>C) Stemming</h3>"},
+{type:"code", n:3,
+ code:`import nltk
+from nltk.stem import PorterStemmer
+from nltk.tokenize import word_tokenize
+nltk.download('punkt')
+
+ps = PorterStemmer()
+text = "The buildings are building fast and programs are running programs"
+tokens = word_tokenize(text)
+stemmed = [ps.stem(t) for t in tokens]
+stemmed_text = ' '.join(stemmed)
+
+print("Original:", text)
+print("Stemmed:", stemmed_text)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+Original: The buildings are building fast and programs are running programs
+Stemmed: the build are build fast and program are run program`}
+],
+
+"Untitled2.ipynb": [
+{type:"md", html:"<h3>A) POS Tagging</h3>"},
+{type:"code", n:1,
+ code:`import nltk
+from nltk.tokenize import word_tokenize
+from nltk.tag import pos_tag
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+
+sentence = "The quick brown fox jumps over the lazy dog"
+tokens = word_tokenize(sentence)
+tagged = pos_tag(tokens)
+
+print(tagged)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Package averaged_perceptron_tagger is already up-to-
+[nltk_data]       date!
+[('The', 'DT'), ('quick', 'JJ'), ('brown', 'NN'), ('fox', 'NN'), ('jumps', 'VBZ'), ('over', 'IN'), ('the', 'DT'), ('lazy', 'JJ'), ('dog', 'NN')]`},
+{type:"md", html:"<h3>B) Lemmatization</h3>"},
+{type:"code", n:2,
+ code:`import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+nltk.download('punkt')
+nltk.download('wordnet')
+
+lemmatizer = WordNetLemmatizer()
+text = "The cats are chasing mice"
+tokens = word_tokenize(text)
+lemmatized = [lemmatizer.lemmatize(t) for t in tokens]
+lemmatized_text = ' '.join(lemmatized)
+
+print("Original:", text)
+print("Lemmatized:", lemmatized_text)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package wordnet to /root/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+Original: The cats are chasing mice
+Lemmatized: The cat are chasing mouse`}
+],
+
+"Untitled3.ipynb": [
+{type:"md", html:"<h3>A) Chunking</h3>"},
+{type:"code", n:1,
+ code:`import nltk
+from nltk.tokenize import word_tokenize
+from nltk.tag import pos_tag
+from nltk.chunk import RegexpParser
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+
+sentence = "The big dog chased the small cat under the table"
+tokens = word_tokenize(sentence)
+tagged = pos_tag(tokens)
+
+grammar = """
+NP: {<DT>?<JJ>*<NN>}
+PP: {<IN><NP>}
+VP: {<VB.*><NP|PP>*}
+CLAUSE: {<NP><VP>}
+"""
+parser = RegexpParser(grammar)
+tree = parser.parse(tagged)
+
+print(tree)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Package averaged_perceptron_tagger is already up-to-
+[nltk_data]       date!
+(S
+  (CLAUSE
+    (NP The/DT big/JJ dog/NN)
+    (VP
+      chased/VBD
+      (NP the/DT small/JJ cat/NN)
+      (PP under/IN (NP the/DT table/NN)))))`},
+{type:"md", html:"<h3>B) Named Entity Recognition</h3>"},
+{type:"code", n:2,
+ code:`import nltk
+from nltk.tokenize import word_tokenize
+from nltk.tag import pos_tag
+from nltk.chunk import ne_chunk
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('maxent_ne_chunker')
+nltk.download('words')
+
+text = "Barack Obama was born in Hawaii and worked in Washington"
+tokens = word_tokenize(text)
+tagged = pos_tag(tokens)
+tree = ne_chunk(tagged)
+
+print(tree)`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package averaged_perceptron_tagger to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Package averaged_perceptron_tagger is already up-to-
+[nltk_data]       date!
+[nltk_data] Downloading package maxent_ne_chunker to
+[nltk_data]     /root/nltk_data...
+[nltk_data]   Package maxent_ne_chunker is already up-to-date!
+[nltk_data] Downloading package words to /root/nltk_data...
+[nltk_data]   Package words is already up-to-date!
+(S
+  (PERSON Barack/NNP Obama/NNP)
+  was/VBD
+  born/VBN
+  in/IN
+  (GPE Hawaii/NNP)
+  and/CC
+  worked/VBD
+  in/IN
+  (GPE Washington/NNP))`}
+],
+
+"Untitled4.ipynb": [
+{type:"md", html:"<h3>A) TF-IDF</h3>"},
+{type:"code", n:1,
+ code:`import nltk
+import string
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+nltk.download('punkt')
+nltk.download('stopwords')
+
+stop_words = set(stopwords.words('english'))
+corpus = [
+    "The cat sat on the mat.",
+    "The dog barked at the cat.",
+    "Cats and dogs are great pets."
+]
+
+def preprocess_text(doc):
+    tokens = word_tokenize(doc)
+    tokens = [t.lower() for t in tokens if t not in string.punctuation]
+    tokens = [t for t in tokens if t not in stop_words]
+    return ' '.join(tokens)
+
+cleaned_corpus = [preprocess_text(doc) for doc in corpus]
+
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(cleaned_corpus)
+print(vectorizer.get_feature_names_out())
+print(tfidf_matrix.toarray())`,
+ out:`[nltk_data] Downloading package punkt to /root/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package stopwords to /root/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+['barked' 'cat' 'cats' 'dog' 'dogs' 'great' 'mat' 'pets' 'sat']
+[[0.         0.4737099  0.         0.         0.         0.
+  0.62276601 0.         0.62276601]
+ [0.6227766  0.4737099  0.         0.6227766  0.         0.
+  0.         0.         0.        ]
+ [0.         0.         0.5        0.         0.5        0.5
+  0.         0.5        0.        ]]`},
+{type:"md", html:"<h3>B) CYK / Chart Parsing</h3>"},
+{type:"code", n:2,
+ code:`import nltk
+
+grammar = nltk.CFG.fromstring("""
+S -> NP VP
+NP -> 'describe'
+VP -> 'your' 'work'
+""")
+
+parser = nltk.ChartParser(grammar)
+sentence = "describe your work"
+tokens = sentence.split()
+
+trees = list(parser.parse(tokens))
+for t in trees:
+    print(t)
+
+if trees:
+    print("Sentence is grammatically valid")
+else:
+    print("Sentence does not match the grammar")`,
+ out:`(S (NP describe) (VP your work))
+Sentence is grammatically valid`}
+]
+};
+
+function highlight(code){
+  const KEYWORDS = ["import","from","for","in","if","else","print","def","return","True","False","None","and","or","not","class"];
+  let esc = code.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  esc = esc.replace(/(#.*)$/gm,'§COM§$1§/COM§');
+  esc = esc.replace(/("""[\s\S]*?"""|'[^'\n]*'|"[^"\n]*")/g, m => '§STR§'+m+'§/STR§');
+  esc = esc.replace(/\b(\d+\.?\d*)\b/g, '§NUM§$1§/NUM§');
+  esc = esc.replace(/\b([A-Za-z_][A-Za-z0-9_]*)(?=\()/g, '§FN§$1§/FN§');
+  KEYWORDS.forEach(k=>{
+    esc = esc.replace(new RegExp('\\b'+k+'\\b(?![^§]*§/STR§)','g'), '§KW§'+k+'§/KW§');
+  });
+  esc = esc.replace(/§COM§/g,'<span class="com">').replace(/§\/COM§/g,'</span>');
+  esc = esc.replace(/§STR§/g,'<span class="str">').replace(/§\/STR§/g,'</span>');
+  esc = esc.replace(/§NUM§/g,'<span class="num">').replace(/§\/NUM§/g,'</span>');
+  esc = esc.replace(/§FN§/g,'<span class="fn">').replace(/§\/FN§/g,'</span>');
+  esc = esc.replace(/§KW§/g,'<span class="kw">').replace(/§\/KW§/g,'</span>');
+  return esc;
+}
+
+function renderFileList(){
+  const el = document.getElementById("fileList");
+  el.innerHTML = files.map(f=>`
+    <div class="filerow" onclick="openNotebook('${f.name}')">
+      <span class="ic">📓</span>
+      <span class="nm">${f.name}</span>
+      <span class="mod">${nowStr}</span>
+      <span class="sz">Notebook</span>
+    </div>`).join("");
+}
+
+function openNotebook(name){
+  document.getElementById("dashView").style.display = "none";
+  document.getElementById("nbView").style.display = "block";
+  document.getElementById("navFname").textContent = name.replace(".ipynb","");
+  const cells = notebooks[name];
+  const c = document.getElementById("cellsContainer");
+  c.innerHTML = cells.map(cell=>{
+    if(cell.type==="md"){
+      return `<div class="md-cell">${cell.html}</div>`;
+    }
+    return `
+    <div class="cell">
+      <div class="prompt">In&nbsp;[${cell.n}]:</div>
+      <div class="body"><div class="input-area"><pre>${highlight(cell.code)}</pre></div></div>
+    </div>
+    <div class="cell">
+      <div class="prompt out">Out[${cell.n}]:</div>
+      <div class="body"><div class="output-area"><pre>${cell.out.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre></div></div>
+    </div>`;
+  }).join("");
+  window.scrollTo(0,0);
+}
+
+function showDash(){
+  document.getElementById("nbView").style.display = "none";
+  document.getElementById("dashView").style.display = "block";
+  document.getElementById("navFname").textContent = "Home";
+}
+
+renderFileList();
+</script>
+</body>
+</html>
